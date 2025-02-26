@@ -1,1 +1,113 @@
-aaaa
+import sys
+import os
+from datetime import datetime, timedelta
+
+def find_line_start(f, position):
+    original_position = f.tell()
+    try:
+        if position == 0:
+            return 0
+        chunk_size = 1024
+        while True:
+            to_read = min(chunk_size, position)
+            new_position = position - to_read
+            if new_position < 0:
+                new_position = 0
+                to_read = position
+            f.seek(new_position)
+            chunk = f.read(to_read)
+            last_newline = chunk.rfind(b'\n')
+            if last_newline != -1:
+                return new_position + last_newline + 1
+            if new_position == 0:
+                return 0
+            position = new_position
+    finally:
+        f.seek(original_position)
+
+def read_line_at(f, position):
+    original_position = f.tell()
+    try:
+        f.seek(position)
+        return f.readline()
+    finally:
+        f.seek(original_position)
+
+def find_date_position(f, target_date_bytes, file_size):
+    low = 0
+    high = file_size
+    while low < high:
+        mid = (low + high) // 2
+        line_start = find_line_start(f, mid)
+        line = read_line_at(f, line_start)
+        if not line:
+            current_date_part = None
+        else:
+            date_end = line.find(b' ')
+            if date_end == -1:
+                current_date_part = line.strip()
+            else:
+                current_date_part = line[:date_end]
+        if current_date_part:
+            if current_date_part < target_date_bytes:
+                low = mid + 1
+            else:
+                high = mid
+        else:
+            low = mid + 1
+    line_start = find_line_start(f, low)
+    line = read_line_at(f, line_start)
+    if not line:
+        return -1
+    date_end = line.find(b' ')
+    current_date_part = line[:date_end] if date_end != -1 else line.strip()
+    if current_date_part == target_date_bytes:
+        return line_start
+    else:
+        return -1
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <date>")
+        sys.exit(1)
+    input_date = sys.argv[1]
+    try:
+        date_obj = datetime.strptime(input_date, '%Y-%m-%d')
+    except ValueError:
+        print("Invalid date format. Please use YYYY-MM-DD.")
+        sys.exit(1)
+    next_date = (date_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+    log_file = 'large_log.txt'
+    output_dir = 'output'
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, f'output_{input_date}.txt')
+    try:
+        with open(log_file, 'rb') as f:
+            file_size = os.fstat(f.fileno()).st_size
+            target_date_bytes = input_date.encode()
+            start_byte = find_date_position(f, target_date_bytes, file_size)
+            if start_byte == -1:
+                with open(output_file, 'w') as out_f:
+                    pass
+                print(f"No entries found for {input_date}")
+                return
+            next_date_bytes = next_date.encode()
+            end_byte = find_date_position(f, next_date_bytes, file_size)
+            if end_byte == -1:
+                end_byte = file_size
+            f.seek(start_byte)
+            bytes_to_read = end_byte - start_byte
+            with open(output_file, 'wb') as out_f:
+                while bytes_to_read > 0:
+                    chunk = f.read(min(bytes_to_read, 1024 * 1024))
+                    if not chunk:
+                        break
+                    out_f.write(chunk)
+                    bytes_to_read -= len(chunk)
+            print(f"Logs for {input_date} extracted to {output_file}")
+    except FileNotFoundError:
+        print(f"Log file {log_file} not found.")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
