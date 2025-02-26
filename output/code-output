@@ -1,1 +1,10 @@
 
+Input Date: 2025-02-26
+Log Entries in large_log.txt:
+Entries for the date 2025-02-26 exist in the log file.
+
+
+Expected Output in Terminal:
+
+
+Logs for 2025-02-26 extracted to output/output_2025-02-26.txt
