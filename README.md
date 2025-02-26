@@ -9,43 +9,10 @@ Key Steps :-
 
 4. Once the start and end bytes are found, read from start to end-1 and write to the output file.
 
+**Step by Step Breakdown**
 
-**Binary Search Implementation**
+Binary Search: The binary search efficiently locates the start and end positions of the logs for the specified date by leveraging the sorted nature of the log entries. This reduces the time complexity to O(log N), where N is the file size.
 
-For finding the start of the target date:
+File Handling: The file is read in binary mode, and operations are performed using byte offsets to handle large files without loading them into memory.
 
-- Initialize low = 0, high = file size.
-
-- While low < high:
-
-- mid = (low + high) // 2
-
-- Seek to mid.
-
-- Move the file pointer to the start of the next line (since mid might be in the middle of a line).
-
-- Read the line and extract its date.
-
-- Compare the date with the target date.
-
-- If the line's date is earlier than the target, set low = mid + 1.
-
-- Else, set high = mid.
-
-- Once the loop ends, low should be the start of the first line with the target date.
-
-Similarly, for the end position, we need to find the first line of the next day and take its position as the end.
-
-
-**According to the problem statement, the logs are generated almost equally every day. So the date is likely present.**
-
-Once we find the start of the first line with the target date, then we need to find the start of the next day's logs. Then, read from the start to the end position.
-
-**Steps**
-
-1. Find start_byte: the first line with target_date.
-
-2. Find end_byte: the first line with next_day_date.
-
-3. Read all lines from start_byte to end_byte -1.
-
+Chunk Reading: The solution reads the log entries in chunks between the identified start and end positions, ensuring efficient memory usage and quick write operations to the output file.
